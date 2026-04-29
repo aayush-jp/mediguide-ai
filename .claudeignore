@@ -1,0 +1,27 @@
+# Dependencies
+frontend/node_modules/
+frontend/.next/
+.venv/
+venv/
+
+# Build output
+frontend/out/
+dist/
+build/
+__pycache__/
+*.pyc
+
+# Large / binary files
+uploads/
+tmp/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.pdf
+*.zip
+
+# Secrets
+.env
+.env.local
