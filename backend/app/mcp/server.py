@@ -7,6 +7,12 @@ MCP_TOOLS = [
     "Multilingual Response Skill",
     "Voice Transcription Skill",
     "Doctor Escalation Skill",
+    "Patient Preference Skill",
+    "Schedule Retrieval Tool",
+    "Availability Analysis Skill",
+    "Appointment Optimization Skill",
+    "Appointment Conflict Resolution Skill",
+    "Appointment Booking Tool",
 ]
 
 

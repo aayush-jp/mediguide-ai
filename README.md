@@ -9,6 +9,7 @@ Advanced full-stack AI-powered healthcare assistant for a final-year AI/ML proje
 - Auth: JWT + bcrypt
 - Database: SQLAlchemy with PostgreSQL support via `DATABASE_URL`; local development falls back to SQLite
 - OCR/AI: Production-ready API shape with modular AI agent, MCP server, and medical skills
+- Appointment Scheduling: protected AI agent flow with patient preference learning, real-time schedule retrieval, conflict-free booking, rescheduling, cancellation, and doctor load balancing
 
 ## Local URLs
 
@@ -19,3 +20,12 @@ Advanced full-stack AI-powered healthcare assistant for a final-year AI/ML proje
 ## Environment
 
 Copy `backend/.env.example` to `backend/.env` for production secrets.
+
+## Protected Scheduling API
+
+- `POST /api/appointments/schedule`
+- `POST /api/appointments/reschedule`
+- `POST /api/appointments/{appointment_id}/cancel`
+- `GET /api/appointments`
+
+All appointment routes require a JWT bearer token.

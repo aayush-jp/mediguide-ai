@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Bot,
   Brain,
+  CalendarClock,
   FileText,
   Globe2,
   HeartPulse,
@@ -81,6 +82,7 @@ function Landing() {
     ["Disease Prediction", "ML-style predictions shown as educational probabilities.", Brain],
     ["Medical Chatbot", "Protected chatbot with safety-first medical guardrails.", Bot],
     ["OCR Analysis", "Upload reports and prescriptions for AI-assisted summaries.", FileText],
+    ["Smart Scheduling", "AI agent scheduling with real-time conflict checks.", CalendarClock],
   ];
 
   return (
@@ -188,6 +190,7 @@ function DashboardLayout() {
     ["prediction", "Disease Prediction", Brain],
     ["chat", "Medical Chatbot", Bot],
     ["report", "Report OCR", Upload],
+    ["appointments", "Appointments", CalendarClock],
     ["history", "Health History", History],
     ["risk", "Risk Tracker", AlertTriangle],
     ["language", "Language + Voice", Globe2],
@@ -228,6 +231,7 @@ function ToolPanel({ active }) {
   if (active === "prediction") return <PredictionTool />;
   if (active === "chat") return <ChatTool />;
   if (active === "report") return <ReportTool />;
+  if (active === "appointments") return <AppointmentTool />;
   if (active === "history") return <HistoryTool />;
   if (active === "risk") return <RiskTool />;
   return <LanguageVoiceTool />;
@@ -239,6 +243,7 @@ function Overview() {
     ["Disease Prediction", "ML prediction API with no final diagnosis claims.", Brain],
     ["Medical Chatbot", "Guardrailed assistant for health questions.", Bot],
     ["Medical Report OCR", "Validated uploads and report summarization.", FileText],
+    ["Smart Appointments", "Preference learning, real-time availability, no double booking, and doctor load balancing.", CalendarClock],
     ["Voice Input", "Speech-ready endpoint and browser voice support path.", Mic],
     ["Doctor Alerts", "Escalates only serious, unclear, persistent, or approval cases.", Stethoscope],
   ];
@@ -316,6 +321,149 @@ function ReportTool() {
     try { setData(await api("/api/ai/report-ocr", { method: "POST", body: form })); } catch (err) { setError(err.message); }
   }
   return <FormTool title="Medical report OCR analysis" onSubmit={submit} error={error}><input type="file" name="file" accept="image/png,image/jpeg,image/webp,application/pdf" required /><button className="btn primary">Upload and analyze</button><ResultBox data={data} /></FormTool>;
+}
+
+function AppointmentTool() {
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [appointments, setAppointments] = useState(null);
+  const [error, setError] = useState("");
+
+  async function loadAppointments() {
+    setAppointments(await api("/api/appointments"));
+  }
+
+  useEffect(() => {
+    loadAppointments().catch(() => setAppointments([]));
+  }, []);
+
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const preferred = form.get("preferred_time_ranges").split(",").map((item) => item.trim()).filter(Boolean);
+    const payload = {
+      patient_id: user?.id,
+      preferred_time_ranges: preferred,
+      urgency_level: form.get("urgency_level"),
+      doctor_specialization_required: form.get("specialization"),
+      current_datetime: form.get("current_datetime") || null,
+      appointment_duration_minutes: Number(form.get("duration")) || 30,
+      confirm_booking: form.get("confirm_booking") === "on",
+      constraints: {
+        location: form.get("location") || null,
+        gender_preference: form.get("gender_preference") || null,
+        language: form.get("language") || null,
+      },
+    };
+
+    try {
+      const result = await api("/api/appointments/schedule", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setData(result);
+      loadAppointments();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function cancelAppointment(id) {
+    setError("");
+    try {
+      await api(`/api/appointments/${id}/cancel`, { method: "POST" });
+      loadAppointments();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <section className="panel wide-panel">
+      <h2>Dynamic appointment scheduling agent</h2>
+      <p>
+        Uses Patient Preference Skill, Schedule Retrieval Tool, Availability Analysis Skill,
+        Optimization Skill, Conflict Resolution Skill, and Appointment Booking Tool.
+      </p>
+      <form className="tool-form" onSubmit={submit}>
+        <div className="row">
+          <label>Preferred ranges
+            <input name="preferred_time_ranges" placeholder="morning, evening" defaultValue="evening" />
+          </label>
+          <label>Urgency
+            <select name="urgency_level" defaultValue="medium">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <div className="row">
+          <label>Specialization
+            <select name="specialization" defaultValue="General Physician">
+              <option>General Physician</option>
+              <option>Cardiologist</option>
+              <option>Dermatologist</option>
+              <option>Pediatrician</option>
+            </select>
+          </label>
+          <label>Current date/time
+            <input name="current_datetime" type="datetime-local" />
+          </label>
+          <label>Duration
+            <input name="duration" type="number" min="15" max="120" defaultValue="30" />
+          </label>
+        </div>
+        <div className="row">
+          <label>Location
+            <input name="location" placeholder="Central Clinic" />
+          </label>
+          <label>Doctor gender
+            <select name="gender_preference" defaultValue="">
+              <option value="">Any</option>
+              <option>Female</option>
+              <option>Male</option>
+            </select>
+          </label>
+          <label>Language
+            <input name="language" placeholder="Hindi" />
+          </label>
+        </div>
+        <label className="checkbox-line">
+          <input name="confirm_booking" type="checkbox" defaultChecked />
+          Confirm booking after validation
+        </label>
+        <button className="btn primary">Run scheduling agent</button>
+      </form>
+      {error && <div className="error">{error}</div>}
+      <div className="appointment-grid">
+        <div>
+          <h3>Agent JSON output</h3>
+          <ResultBox data={data} />
+        </div>
+        <div>
+          <h3>My appointments</h3>
+          {!appointments?.length ? (
+            <div className="empty">No appointments yet.</div>
+          ) : (
+            <div className="appointment-list">
+              {appointments.map((item) => (
+                <article key={item.id} className="appointment-item">
+                  <strong>{item.doctor_name}</strong>
+                  <span>{item.specialization}</span>
+                  <span>{new Date(item.starts_at).toLocaleString()} - {item.status}</span>
+                  {item.status === "confirmed" && (
+                    <button className="btn secondary" onClick={() => cancelAppointment(item.id)}>Cancel</button>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function HistoryTool() {

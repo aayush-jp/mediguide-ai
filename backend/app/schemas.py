@@ -82,3 +82,56 @@ class HealthHistoryOut(HealthHistoryCreate):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AppointmentConstraints(BaseModel):
+    location: str | None = Field(default=None, max_length=120)
+    gender_preference: str | None = Field(default=None, max_length=40)
+    language: str | None = Field(default=None, max_length=80)
+
+
+class AppointmentScheduleRequest(BaseModel):
+    patient_id: int | None = None
+    preferred_time_ranges: list[str] = Field(default_factory=list)
+    urgency_level: Literal["low", "medium", "high"]
+    doctor_specialization_required: str = Field(min_length=2, max_length=120)
+    current_datetime: datetime | None = None
+    constraints: AppointmentConstraints = Field(default_factory=AppointmentConstraints)
+    appointment_duration_minutes: int = Field(default=30, ge=15, le=120)
+    confirm_booking: bool = True
+
+
+class AppointmentRescheduleRequest(AppointmentScheduleRequest):
+    appointment_id: int
+
+
+class AppointmentSlot(BaseModel):
+    date: str
+    time: str
+    doctor_id: str
+    doctor_name: str | None = None
+    specialization: str | None = None
+
+
+class AppointmentScheduleResponse(BaseModel):
+    recommended_slot: AppointmentSlot | None
+    alternative_slots: list[AppointmentSlot]
+    reasoning: str
+    urgency_handling: str
+    status: Literal["confirmed", "suggestion", "conflict"]
+    appointment_id: int | None = None
+    preference_profile: dict = Field(default_factory=dict)
+
+
+class AppointmentOut(BaseModel):
+    id: int
+    doctor_id: str
+    doctor_name: str
+    specialization: str
+    starts_at: datetime
+    ends_at: datetime
+    urgency_level: str
+    status: str
+    reasoning: str
+
+    model_config = {"from_attributes": True}
